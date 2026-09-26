@@ -1,0 +1,50 @@
+name: Desktop build
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: engine/requirements.txt
+
+      - name: Build native engine
+        run: |
+          pip install -r engine/requirements.txt
+          python engine/build_engine.py
+          '{"id":"t","path":"README.md"}' | ./engine/dist/mdify-engine/mdify-engine.exe
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build installer
+        run: npm run dist:win
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Mdify-Windows
+          path: release/*.exe
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.exe
+          generate_release_notes: true

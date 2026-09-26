@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-electron
+release
+engine/dist
+engine/build
+engine/*.spec
+__pycache__
+.venv
+test-results
+playwright-report
+*.log
+.DS_Store
+public/ocr
