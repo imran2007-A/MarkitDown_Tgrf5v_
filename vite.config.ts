@@ -38,13 +38,13 @@ export default defineConfig(({ mode }) => {
     !isElectron &&
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icon.svg'],
+        includeAssets: ['favicon.png'],
         manifest: {
           name: 'Mdify — Anything to Markdown',
           short_name: 'Mdify',
           description: 'Convert any file or folder into clean Markdown. Offline.',
-          theme_color: '#09090b',
-          background_color: '#09090b',
+          theme_color: '#100f0e',
+          background_color: '#100f0e',
           display: 'standalone',
           start_url: '/',
           icons: [

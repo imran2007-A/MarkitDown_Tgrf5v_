@@ -1,21 +1,10 @@
 # Third-party notices
 
-## Uiverse.io components (MIT License)
+## Magic UI (MIT License)
 
-The following components from the [Uiverse Galaxy](https://github.com/uiverse-io/galaxy) collection were adapted (recoloured, resized and refactored for React) in `src/index.css` and `src/components/ui.tsx`:
-
-| Component | Author | Used for |
-|---|---|---|
-| Galaxy glow button (`evil-grasshopper-45`) | Balthasar42 | Export button |
-| Sparkle button (`fat-bat-0`) | JkHuger, from a CodePen by Jhey | "Copy for AI" button |
-| Comet loader (`jolly-yak-23`) | VashonG | Conversion spinner |
-| Rotating glow card (`swift-bullfrog-34`) | SelfMadeSystem | Drop zone border |
+`src/components/magicui/NumberTicker.tsx` is adapted from [Magic UI](https://magicui.design)'s Number Ticker. Copyright (c) Magic UI.
 
 ```
-MIT License
-
-Copyright (c) 2023 Uiverse.io
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
@@ -35,16 +24,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Magic UI components (MIT License)
-
-Adapted from [Magic UI](https://magicui.design) (the originals behind many 21st.dev community components), found in `src/components/magicui/`: Border Beam, Magic Card, Number Ticker, Marquee, Word Rotate, Blur Fade and Animated Shiny Text. They were recoloured and simplified for Vite; the `next-themes` dependency was removed.
-
-Copyright (c) Magic UI. Licensed under the MIT License (same terms as above).
-
 ## Microsoft MarkItDown (MIT License)
 
 The desktop app bundles [MarkItDown](https://github.com/microsoft/markitdown) as its native conversion engine.
 
 ## Fonts
 
-Geist and Geist Mono by Vercel, SIL Open Font License 1.1.
+Newsreader (Production Type) and IBM Plex Mono (IBM), SIL Open Font License 1.1.

@@ -100,11 +100,11 @@ function createWindow() {
     height: 860,
     minWidth: 900,
     minHeight: 600,
-    backgroundColor: '#09090b',
+    backgroundColor: '#100f0e',
     title: 'Mdify',
     icon: path.join(__dirname, '..', 'build', 'icon.png'),
     titleBarStyle: 'hidden',
-    titleBarOverlay: isWin || process.platform === 'linux' ? { color: '#09090b', symbolColor: '#a1a1aa', height: 56 } : undefined,
+    titleBarOverlay: isWin || process.platform === 'linux' ? { color: '#100f0e', symbolColor: '#7d776d', height: 44 } : undefined,
     trafficLightPosition: { x: 16, y: 20 },
     show: false,
     webPreferences: {

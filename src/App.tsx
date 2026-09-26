@@ -1,48 +1,38 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Cpu, Download, History, Keyboard, ShieldCheck, Sparkles, Trash2, FolderTree, Zap, FileText } from 'lucide-react'
 import type { HistoryEntry, Job } from './lib/types'
 import { extOf } from './lib/formats'
 import { expandZips, fromDataTransfer, fromFileList, type Picked } from './lib/collect'
 import { convertFile } from './lib/convert'
-import { countTokens, formatTokens } from './lib/tokens'
+import { countTokens } from './lib/tokens'
 import { addHistory } from './lib/history'
-import { DropZone } from './components/DropZone'
-import { JobList } from './components/JobList'
-import { OutputPanel } from './components/OutputPanel'
-import { ExportMenu } from './components/ExportMenu'
-import { HistoryDrawer } from './components/HistoryDrawer'
-import { useToast } from './components/Toaster'
-import { Badge, Comet, GhostButton, IconButton } from './components/ui'
-import { ShortcutsDialog } from './components/ShortcutsDialog'
-import { BlurFade } from './components/magicui/BlurFade'
-import { WordRotate } from './components/magicui/WordRotate'
-import { ShinyText } from './components/magicui/ShinyText'
-import { MagicCard } from './components/magicui/MagicCard'
-import { NumberTicker } from './components/magicui/NumberTicker'
 import { sampleFile } from './lib/sample'
+import { Inbox } from './components/Inbox'
+import { Sheet, type Mode } from './components/Sheet'
+import { EmptyDesk } from './components/EmptyDesk'
+import { DragVeil } from './components/DragVeil'
+import { Stamp } from './components/Stamp'
+import { HistoryDrawer } from './components/HistoryDrawer'
+import { ShortcutsDialog } from './components/ShortcutsDialog'
+import { useToast } from './components/Toaster'
+import { TextButton } from './components/ui'
 
 const CONCURRENCY = 3
 const uid = () => Math.random().toString(36).slice(2, 10)
 
 type InstallEvent = Event & { prompt: () => Promise<void> }
 
-function Logo() {
-  return (
-    <div className="flex items-center gap-2.5">
-      <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" className="size-8 rounded-[10px] shadow-lg shadow-violet/20" />
-      <span className="text-[17px] font-semibold tracking-tight">Mdify</span>
-    </div>
-  )
-}
-
 export default function App() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [dir, setDir] = useState(0)
+  const [mode, setMode] = useState<Mode>('read')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [nativeEngine, setNativeEngine] = useState(false)
   const [installEvt, setInstallEvt] = useState<InstallEvent | null>(null)
+  const [drag, setDrag] = useState({ active: false, count: 0 })
+  const [stamp, setStamp] = useState<{ id: number; label: string } | null>(null)
   const running = useRef(new Set<string>())
   const sessionId = useRef(uid())
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -50,12 +40,30 @@ export default function App() {
   const toast = useToast()
   const jobsRef = useRef<Job[]>([])
   jobsRef.current = jobs
+  const selectedRef = useRef<string | null>(null)
+  selectedRef.current = selectedId
 
   useEffect(() => {
     window.mdify?.engineAvailable().then(setNativeEngine).catch(() => {})
     const onPrompt = (e: Event) => { e.preventDefault(); setInstallEvt(e as InstallEvent) }
     window.addEventListener('beforeinstallprompt', onPrompt)
     return () => window.removeEventListener('beforeinstallprompt', onPrompt)
+  }, [])
+
+  const select = useCallback((id: string) => {
+    const done = jobsRef.current.filter((j) => j.status === 'done').map((j) => j.id)
+    const from = selectedRef.current ? done.indexOf(selectedRef.current) : -1
+    const to = done.indexOf(id)
+    if (id === selectedRef.current) return
+    setDir(from < 0 ? 0 : to > from ? 1 : -1)
+    setSelectedId(id)
+  }, [])
+
+  const stampTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const doStamp = useCallback((label: string) => {
+    clearTimeout(stampTimer.current)
+    setStamp({ id: Date.now(), label })
+    stampTimer.current = setTimeout(() => setStamp(null), 1300)
   }, [])
 
   const patch = useCallback((id: string, p: Partial<Job>) => {
@@ -94,7 +102,7 @@ export default function App() {
         .then(async ({ markdown, engine }) => {
           const tokens = await countTokens(markdown)
           patch(job.id, { status: 'done', markdown, engine, tokens, ms: performance.now() - started })
-          setSelectedId((cur) => cur ?? job.id)
+          setSelectedId((cur) => { if (!cur) setDir(0); return cur ?? job.id })
         })
         .catch((e: unknown) => {
           console.error(job.relPath, e)
@@ -129,7 +137,7 @@ export default function App() {
         files: done.map((j) => ({ relPath: j.relPath, markdown: j.markdown ?? '' })),
       }).catch(() => {})
       const failed = jobs.filter((j) => j.status === 'error').length
-      toast(failed ? `Done · ${failed} failed` : `Converted ${done.length} ${done.length === 1 ? 'file' : 'files'}`, failed ? 'err' : 'ok')
+      if (failed) toast(`${failed} ${failed === 1 ? 'file' : 'files'} could not be read`, 'err')
     }
     wasBusy.current = busy
   }, [busy, done, exportName, jobs, toast, totalTokens])
@@ -153,6 +161,7 @@ export default function App() {
       }
     })
     setJobs(restored)
+    setDir(0)
     setSelectedId(restored[0]?.id ?? null)
     Promise.all(restored.map(async (j) => patch(j.id, { tokens: await countTokens(j.markdown!) })))
   }
@@ -174,10 +183,9 @@ export default function App() {
         const ids = jobsRef.current.filter((j) => j.status === 'done').map((j) => j.id)
         if (!ids.length) return
         e.preventDefault()
-        setSelectedId((cur) => {
-          const i = cur ? ids.indexOf(cur) : -1
-          return ids[Math.max(0, Math.min(ids.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]
-        })
+        const cur = selectedRef.current
+        const i = cur ? ids.indexOf(cur) : -1
+        select(ids[Math.max(0, Math.min(ids.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))])
       }
     }
     const onPaste = (e: ClipboardEvent) => {
@@ -185,175 +193,112 @@ export default function App() {
         addPicked(fromFileList(e.clipboardData.files))
       }
     }
-    const blockNav = (e: DragEvent) => e.preventDefault()
+    let depth = 0
+    const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files')
+    const onEnter = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      e.preventDefault()
+      depth++
+      setDrag({ active: true, count: e.dataTransfer?.items.length ?? 0 })
+    }
+    const onLeave = (e: DragEvent) => {
+      if (!hasFiles(e)) return
+      if (--depth <= 0) { depth = 0; setDrag({ active: false, count: 0 }) }
+    }
+    const onOver = (e: DragEvent) => e.preventDefault()
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault()
+      depth = 0
+      setDrag({ active: false, count: 0 })
+      if (e.dataTransfer) fromDataTransfer(e.dataTransfer).then(addPicked)
+    }
     window.addEventListener('keydown', onKey)
     window.addEventListener('paste', onPaste)
-    window.addEventListener('dragover', blockNav)
-    window.addEventListener('drop', blockNav)
+    window.addEventListener('dragenter', onEnter)
+    window.addEventListener('dragleave', onLeave)
+    window.addEventListener('dragover', onOver)
+    window.addEventListener('drop', onDrop)
     return () => {
       window.removeEventListener('keydown', onKey)
       window.removeEventListener('paste', onPaste)
-      window.removeEventListener('dragover', blockNav)
-      window.removeEventListener('drop', blockNav)
+      window.removeEventListener('dragenter', onEnter)
+      window.removeEventListener('dragleave', onLeave)
+      window.removeEventListener('dragover', onOver)
+      window.removeEventListener('drop', onDrop)
     }
   }, [addPicked])
 
-  const dropProps = {
-    onSample: () => addPicked([{ file: sampleFile(), relPath: 'os-unit-3-notes.html', supported: true }]),
-    onFiles: (l: FileList) => addPicked(fromFileList(l)),
-    onDrop: (dt: DataTransfer) => fromDataTransfer(dt).then(addPicked),
-    fileInputRef,
-    folderInputRef,
-  }
-
+  const pickFiles = () => fileInputRef.current?.click()
+  const pickFolder = () => folderInputRef.current?.click()
+  const loadSample = () => addPicked([{ file: sampleFile(), relPath: 'os-unit-3-notes.html', supported: true }])
   const hasJobs = jobs.length > 0
 
   return (
-    <div className="flex min-h-full flex-col">
-      <div className="app-bg" aria-hidden />
-
-      <header className="titlebar sticky top-0 z-30 border-b border-line bg-bg/60 backdrop-blur-xl">
-        <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-3 px-4 sm:px-6">
-          <button onClick={clearAll} aria-label="Mdify home" className="rounded-lg"><Logo /></button>
-          <div className="ml-2 hidden sm:block">
-            {nativeEngine ? (
-              <Badge tone="violet"><Cpu size={11} /> Native engine</Badge>
-            ) : (
-              <Badge><ShieldCheck size={11} /> On-device · offline</Badge>
-            )}
-          </div>
-          <div className="ml-auto flex items-center gap-1">
-            {installEvt && (
-              <GhostButton className="h-8 text-xs" onClick={async () => { await installEvt.prompt(); setInstallEvt(null) }}>
-                <Download size={13} /> Install app
-              </GhostButton>
-            )}
-            <IconButton label="Keyboard shortcuts" onClick={() => setShortcutsOpen(true)} className="hidden sm:inline-flex"><Keyboard size={17} /></IconButton>
-            <IconButton label="History" onClick={() => setHistoryOpen(true)}><History size={17} /></IconButton>
-          </div>
-        </div>
+    <div className="grain flex h-full flex-col">
+      <header className="titlebar flex h-11 flex-none items-center gap-6 border-b border-rule px-4 lg:px-5">
+        <button onClick={clearAll} className="flex items-baseline gap-2" aria-label="Mdify — start over">
+          <span className="font-serif text-[21px] font-medium italic leading-none tracking-[-0.02em] text-ink">Mdify</span>
+          <span className="size-[5px] translate-y-[-2px] rounded-full bg-vermilion" aria-hidden />
+        </button>
+        <nav className="ml-auto flex items-center gap-5">
+          <span className="label hidden text-faint sm:inline" title={nativeEngine ? 'MarkItDown engine available' : 'Everything runs on this device'}>
+            {nativeEngine ? 'Native engine' : 'Offline'}
+          </span>
+          {installEvt && <TextButton onClick={async () => { await installEvt.prompt(); setInstallEvt(null) }}>Install</TextButton>}
+          <TextButton onClick={() => setHistoryOpen(true)}>Archive</TextButton>
+          <TextButton onClick={() => setShortcutsOpen(true)} aria-label="Keyboard shortcuts" className="max-sm:hidden">?</TextButton>
+        </nav>
       </header>
 
-      <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-8 sm:px-6">
-        <AnimatePresence mode="wait">
-          {!hasJobs ? (
-            <motion.div
-              key="hero"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.35, ease: [0.2, 0.8, 0.2, 1] }}
-              className="mx-auto flex max-w-3xl flex-col items-center pt-10 sm:pt-20"
-            >
-              <BlurFade>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-violet/25 bg-violet/[0.08] px-3 py-1 text-xs font-medium text-violet">
-                  <Sparkles size={12} />
-                  <ShinyText className="text-violet/80">Free · Offline · No sign-up</ShinyText>
-                </span>
-              </BlurFade>
-              <BlurFade delay={0.08}>
-                <h1 className="mt-6 text-center text-[2.6rem] font-semibold leading-[1.02] tracking-[-0.04em] sm:text-7xl">
-                  <WordRotate className="text-gradient" words={['Anything in.', 'PDFs in.', 'Slides in.', 'Folders in.', 'Scans in.', 'Code in.']} />
-                  <br />
-                  <span className="text-fg">Markdown out.</span>
-                </h1>
-              </BlurFade>
-              <BlurFade delay={0.16}>
-                <p className="mx-auto mt-5 max-w-lg text-center text-[15px] leading-relaxed text-muted sm:text-base">
-                  Drop a file or an entire folder. Get clean, structured Markdown for your notes, your docs, or any AI chat. It takes seconds and runs entirely on your device.
-                </p>
-              </BlurFade>
-              <BlurFade delay={0.24} className="mt-10 w-full">
-                <DropZone {...dropProps} />
-              </BlurFade>
-              <div className="mt-6 grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
-                {[
-                  { Icon: ShieldCheck, title: 'Private by design', body: 'Files never leave your device. Works offline once installed.' },
-                  { Icon: FolderTree, title: 'Whole folders', body: 'Keeps the structure and skips node_modules, .git and other junk.' },
-                  { Icon: Zap, title: 'AI-ready output', body: 'Exact token counts and one-click Copy for AI.' },
-                ].map(({ Icon, title, body }, i) => (
-                  <BlurFade key={title} delay={0.32 + i * 0.06}>
-                    <MagicCard className="h-full">
-                      <div className="p-5">
-                        <span className="grid size-9 place-items-center rounded-xl border border-line bg-linear-to-b from-violet/20 to-cyan/5">
-                          <Icon size={16} className="text-violet" />
-                        </span>
-                        <p className="mt-4 text-sm font-medium">{title}</p>
-                        <p className="mt-1 text-[13px] leading-relaxed text-muted">{body}</p>
-                      </div>
-                    </MagicCard>
-                  </BlurFade>
-                ))}
-              </div>
-              <footer className="mt-16 flex w-full flex-col items-center justify-between gap-2 border-t border-line pt-6 text-xs text-faint sm:flex-row">
-                <span className="flex items-center gap-2"><FileText size={13} className="text-violet" /> Mdify v{__APP_VERSION__} · Built by Imran</span>
-                <span>No accounts, no tracking, no uploads.</span>
-              </footer>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="work"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.25 }}
-              className="grid gap-4 pt-4 lg:h-[calc(100dvh-3.5rem-2rem)] lg:grid-cols-[minmax(320px,380px)_1fr]"
-            >
-              <aside className="flex min-h-0 flex-col gap-3">
-                <DropZone compact {...dropProps} />
-                <div className="glass flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl">
-                  <div className="flex items-center gap-2 px-4 py-3">
-                    <h2 className="text-sm font-medium">Files</h2>
-                    <span className="text-xs text-faint">
-                      {done.length}/{jobs.filter((j) => j.status !== 'skipped').length}
-                    </span>
-                    {busy && <Comet size={13} />}
-                    <span className="ml-auto font-mono text-xs text-muted"><NumberTicker value={totalTokens} format={(n) => formatTokens(Math.round(n))} /> tok</span>
-                    <IconButton label="Clear all" onClick={clearAll} disabled={busy} className="-mr-1.5"><Trash2 size={14} /></IconButton>
-                  </div>
-                  <div className="h-px w-full bg-line" aria-hidden>
-                    <motion.div
-                      className="h-px bg-linear-to-r from-violet to-cyan"
-                      animate={{ width: `${progress * 100}%`, opacity: busy ? 1 : 0 }}
-                      transition={{ duration: 0.4 }}
-                    />
-                  </div>
-                  <div className="max-h-[40vh] min-h-0 flex-1 overflow-y-auto p-2 lg:max-h-none">
-                    <JobList
-                      jobs={jobs}
-                      selectedId={selectedId}
-                      onSelect={setSelectedId}
-                      onRemove={(id) => { setJobs((js) => js.filter((j) => j.id !== id)); if (id === selectedId) setSelectedId(null) }}
-                      onRetry={(id) => patch(id, { status: 'queued', error: undefined })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-end border-t border-line p-3">
-                    <ExportMenu files={done.map((j) => ({ relPath: j.relPath, markdown: j.markdown ?? '' }))} name={exportName} />
+      <AnimatePresence mode="wait">
+        {!hasJobs ? (
+          <motion.main key="empty" className="min-h-0 flex-1" exit={{ opacity: 0, y: -12, transition: { duration: 0.2 } }}>
+            <EmptyDesk onFiles={pickFiles} onFolder={pickFolder} onSample={loadSample} />
+          </motion.main>
+        ) : (
+          <motion.div key="work" className="flex min-h-0 flex-1 flex-col lg:flex-row" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <Inbox
+              jobs={jobs}
+              selectedId={selectedId}
+              busy={busy}
+              progress={progress}
+              totalTokens={totalTokens}
+              exportFiles={done.map((j) => ({ relPath: j.relPath, markdown: j.markdown ?? '' }))}
+              exportName={exportName}
+              onSelect={select}
+              onRemove={(id) => { setJobs((js) => js.filter((j) => j.id !== id)); if (id === selectedId) setSelectedId(null) }}
+              onRetry={(id) => patch(id, { status: 'queued', error: undefined })}
+              onAddFiles={pickFiles}
+              onAddFolder={pickFolder}
+              onClear={clearAll}
+              onExported={doStamp}
+            />
+            <main className="relative min-h-0 flex-1 border-t border-rule lg:border-t-0">
+              {selected ? (
+                <Sheet job={selected} dir={dir} mode={mode} onMode={(m) => { setDir(0); setMode(m) }} onEdit={onEdit} onStamp={doStamp} />
+              ) : (
+                <div className="grid h-full place-items-center px-6">
+                  <div className="w-full max-w-[420px] text-center">
+                    <p className="font-serif text-[26px] italic text-ink-2">{busy ? 'Setting the type…' : 'Pick a page from the inbox.'}</p>
+                    {busy && <span className="pen-line mx-auto mt-6 block w-40" />}
                   </div>
                 </div>
-              </aside>
+              )}
+              <Stamp stamp={stamp} />
+            </main>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-              <div className="min-h-0">
-                {selected ? (
-                  <OutputPanel key={selected.id} job={selected} onEdit={onEdit} />
-                ) : (
-                  <div className="glass flex h-full min-h-[40vh] flex-col items-center justify-center gap-3 rounded-3xl text-sm text-muted">
-                    {busy ? (
-                      <><Comet size={28} /><span className="shimmer-text">Converting your files…</span></>
-                    ) : (
-                      <>
-                        <span className="grid size-12 place-items-center rounded-2xl border border-line bg-white/[0.03]"><FileText size={20} className="text-faint" /></span>
-                        <span>Select a converted file to preview it</span>
-                        <span className="text-xs text-faint">Tip: use ↑ ↓ to move between files</span>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </main>
-
+      <input ref={fileInputRef} type="file" multiple hidden onChange={(e) => { if (e.target.files?.length) addPicked(fromFileList(e.target.files)); e.target.value = '' }} />
+      <input
+        ref={folderInputRef}
+        type="file"
+        hidden
+        {...({ webkitdirectory: '', directory: '' } as object)}
+        onChange={(e) => { if (e.target.files?.length) addPicked(fromFileList(e.target.files)); e.target.value = '' }}
+      />
+      <DragVeil active={drag.active} count={drag.count} />
       <HistoryDrawer open={historyOpen} onClose={() => setHistoryOpen(false)} onRestore={restore} />
       <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
