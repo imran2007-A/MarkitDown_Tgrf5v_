@@ -53,7 +53,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "Mdify-Setup-${version}.exe"
+      "artifactName": "Mdify-Setup.exe"
     },
     "linux": {
       "target": [

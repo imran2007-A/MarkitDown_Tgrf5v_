@@ -19,6 +19,7 @@ import { Kbd, TextButton } from './components/ui'
 import { CommandPalette, type Command } from './components/CommandPalette'
 import { addToLedger } from './lib/stats'
 import { setSoundOn, soundOn } from './lib/typewriter'
+import { RELEASES_URL, WINDOWS_DOWNLOAD_URL } from './lib/links'
 import { canPickDirectory, mergeWithToc, saveText, saveToFolder, saveZip, type SaveReceipt } from './lib/export'
 import { Receipt } from './components/Receipt'
 import { WindowControls } from './components/WindowControls'
@@ -280,6 +281,10 @@ export default function App() {
     { id: 'archive', label: 'Open the archive', hint: 'Ctrl H', run: () => setHistoryOpen(true) },
     { id: 'keys', label: 'Keyboard shortcuts', hint: '?', run: () => setShortcutsOpen(true) },
     ...(window.mdify ? [{ id: 'full', label: 'Toggle full screen', hint: 'F11', run: () => { window.mdify?.toggleFullscreen() } }] : []),
+    ...(!window.mdify ? [
+      { id: 'getwin', label: 'Download the Windows app', hint: 'Mdify-Setup.exe', run: () => { window.location.href = WINDOWS_DOWNLOAD_URL } },
+      { id: 'releases', label: 'See all releases & release notes', run: () => { window.open(RELEASES_URL, '_blank', 'noopener') } },
+    ] : []),
     { id: 'sound', label: `Splash sound: turn ${soundOn() ? 'off' : 'on'}`, run: () => { const on = !soundOn(); setSoundOn(on); toast(`Splash sound ${on ? 'on' : 'off'}`, 'info') } },
   ]
 
@@ -311,6 +316,15 @@ export default function App() {
             {nativeEngine ? 'Native engine' : 'On-device'}
           </span>
           {installEvt && <TextButton onClick={async () => { await installEvt.prompt(); setInstallEvt(null) }}>Install</TextButton>}
+          {!window.mdify && (
+            <a
+              href={WINDOWS_DOWNLOAD_URL}
+              title="Download the Windows desktop app (adds full screen, a native engine, EPUB and Outlook files)"
+              className="label hidden items-center gap-1.5 text-pencil transition-colors hover:text-ink lg:inline-flex pointer-coarse:hidden"
+            >
+              Windows app <span className="text-vermilion">↓</span>
+            </a>
+          )}
           <TextButton onClick={() => setPaletteOpen(true)} className="sm:hidden">Find</TextButton>
           <TextButton onClick={() => setHistoryOpen(true)}>Archive</TextButton>
           <TextButton onClick={() => setShortcutsOpen(true)} aria-label="Keyboard shortcuts" className="max-sm:hidden">?</TextButton>

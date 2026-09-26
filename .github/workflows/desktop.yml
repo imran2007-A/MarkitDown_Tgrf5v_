@@ -48,3 +48,17 @@ jobs:
         with:
           files: release/*.exe
           generate_release_notes: true
+          body: |
+            ## Mdify ${{ github.ref_name }}: anything in, Markdown out
+
+            Convert PDFs (including scanned ones), Word, PowerPoint, Excel, images, web pages, code, whole folders and zips into clean Markdown. Everything runs on your computer. Nothing is uploaded.
+
+            ### Install on Windows
+            1. Download **Mdify-Setup.exe** below.
+            2. Run it. Windows may show **"Windows protected your PC"**, because the app isn't code-signed yet. Click **More info → Run anyway**.
+            3. Pick an install folder and finish. Mdify appears in your Start menu.
+
+            Press **F11** to switch between full screen and a window, and **?** to see every shortcut.
+
+            ### No install?
+            Use the web version in any browser; on Android, open it in Chrome and tap **Install app**.

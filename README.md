@@ -10,6 +10,12 @@
 - **History:** past conversions are stored locally on your device.
 - **Private:** everything runs on your device. Nothing is uploaded.
 
+## Download
+
+- **Windows:** [**Mdify-Setup.exe**](https://github.com/imran2007-A/MarkitDown_Tgrf5v_/releases/latest/download/Mdify-Setup.exe) (latest release). Windows may say "Windows protected your PC" because the app isn't code-signed yet; click **More info → Run anyway**.
+- **Any browser / Android:** open the web version and choose *Install app* (or *Add to Home screen*).
+- All versions and release notes: [Releases](https://github.com/imran2007-A/MarkitDown_Tgrf5v_/releases).
+
 ## Two apps, one codebase
 
 | | Web / Android (PWA) | Windows desktop (Electron) |
@@ -17,7 +23,7 @@
 | Engine | In-browser (pdf.js, mammoth, SheetJS, Tesseract) | Same, plus Microsoft **MarkItDown** as a fallback |
 | Offline | Yes, after first load | Yes |
 | Save to folder | Chrome desktop | Yes |
-| Install | Open the site → *Install app* / *Add to Home screen* | Run `Mdify-Setup-x.y.z.exe` |
+| Install | Open the site → *Install app* / *Add to Home screen* | Run `Mdify-Setup.exe` |
 
 ## Develop
 
