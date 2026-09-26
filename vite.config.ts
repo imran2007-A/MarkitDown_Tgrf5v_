@@ -26,9 +26,9 @@ function ocrAssets() {
   }
 }
 
-const isElectron = process.env.MDIFY_TARGET === 'electron'
-
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  const isElectron = mode === 'electron'
+  return {
   base: isElectron ? './' : '/',
   plugins: [
     ocrAssets(),
@@ -68,4 +68,5 @@ export default defineConfig({
       }),
   ],
   build: { chunkSizeWarningLimit: 4000 },
+}
 })
