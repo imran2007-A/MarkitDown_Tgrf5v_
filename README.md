@@ -12,9 +12,9 @@
 
 ## Download
 
-- **Windows:** [**Mdify-Setup.exe**](https://github.com/imran2007-A/MarkitDown_Tgrf5v_/releases/latest/download/Mdify-Setup.exe) (latest release). Windows may say "Windows protected your PC" because the app isn't code-signed yet; click **More info → Run anyway**.
+- **Windows:** [**Mdify-Setup.exe**](https://github.com/imran2007-A/Mdify/releases/latest/download/Mdify-Setup.exe) (latest release). Windows may say "Windows protected your PC" because the app isn't code-signed yet; click **More info → Run anyway**.
 - **Any browser / Android:** open the web version and choose *Install app* (or *Add to Home screen*).
-- All versions and release notes: [Releases](https://github.com/imran2007-A/MarkitDown_Tgrf5v_/releases).
+- All versions and release notes: [Releases](https://github.com/imran2007-A/Mdify/releases).
 
 ## Two apps, one codebase
 
