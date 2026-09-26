@@ -36,6 +36,11 @@ export interface DesktopBridge {
   saveFiles: (dir: string, files: { relPath: string; content: string }[]) => Promise<{ written: number }>
   saveFile: (name: string, data: string | Uint8Array) => Promise<string | null>
   revealInFolder: (path: string) => Promise<void>
+  isFullscreen: () => Promise<boolean>
+  toggleFullscreen: () => Promise<void>
+  minimize: () => Promise<void>
+  close: () => Promise<void>
+  onFullscreenChange: (cb: (on: boolean) => void) => () => void
 }
 
 declare global {

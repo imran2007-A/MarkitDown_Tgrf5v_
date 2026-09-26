@@ -125,8 +125,8 @@
 /* Electron frameless window */
 [data-desktop] .titlebar { -webkit-app-region: drag; }
 [data-desktop] .titlebar :is(button, a, input) { -webkit-app-region: no-drag; }
-[data-desktop='win32'] .titlebar, [data-desktop='linux'] .titlebar { padding-right: 150px; }
-[data-desktop='darwin'] .titlebar { padding-left: 84px; }
+[data-desktop='win32']:not([data-fullscreen]) .titlebar, [data-desktop='linux']:not([data-fullscreen]) .titlebar { padding-right: 150px; }
+[data-desktop='darwin']:not([data-fullscreen]) .titlebar { padding-left: 84px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }

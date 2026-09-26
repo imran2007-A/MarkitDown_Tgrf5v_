@@ -21,6 +21,7 @@ import { addToLedger } from './lib/stats'
 import { setSoundOn, soundOn } from './lib/typewriter'
 import { canPickDirectory, mergeWithToc, saveText, saveToFolder, saveZip, type SaveReceipt } from './lib/export'
 import { Receipt } from './components/Receipt'
+import { WindowControls } from './components/WindowControls'
 
 const CONCURRENCY = 3
 const uid = () => Math.random().toString(36).slice(2, 10)
@@ -278,6 +279,7 @@ export default function App() {
       : []),
     { id: 'archive', label: 'Open the archive', hint: 'Ctrl H', run: () => setHistoryOpen(true) },
     { id: 'keys', label: 'Keyboard shortcuts', hint: '?', run: () => setShortcutsOpen(true) },
+    ...(window.mdify ? [{ id: 'full', label: 'Toggle full screen', hint: 'F11', run: () => { window.mdify?.toggleFullscreen() } }] : []),
     { id: 'sound', label: `Splash sound: turn ${soundOn() ? 'off' : 'on'}`, run: () => { const on = !soundOn(); setSoundOn(on); toast(`Splash sound ${on ? 'on' : 'off'}`, 'info') } },
   ]
 
@@ -312,6 +314,7 @@ export default function App() {
           <TextButton onClick={() => setPaletteOpen(true)} className="sm:hidden">Find</TextButton>
           <TextButton onClick={() => setHistoryOpen(true)}>Archive</TextButton>
           <TextButton onClick={() => setShortcutsOpen(true)} aria-label="Keyboard shortcuts" className="max-sm:hidden">?</TextButton>
+          <WindowControls />
         </nav>
       </header>
 

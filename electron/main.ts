@@ -102,6 +102,13 @@ function registerIpc() {
     await writeFile(r.filePath, typeof data === 'string' ? data : Buffer.from(data))
     return r.filePath
   })
+  ipcMain.handle('window:isFullscreen', (e) => BrowserWindow.fromWebContents(e.sender)?.isFullScreen() ?? false)
+  ipcMain.handle('window:toggleFullscreen', (e) => {
+    const w = BrowserWindow.fromWebContents(e.sender)
+    if (w) w.setFullScreen(!w.isFullScreen())
+  })
+  ipcMain.handle('window:minimize', (e) => BrowserWindow.fromWebContents(e.sender)?.minimize())
+  ipcMain.handle('window:close', (e) => BrowserWindow.fromWebContents(e.sender)?.close())
   ipcMain.handle('shell:reveal', async (_e, p: string) => {
     const isDir = await stat(p).then((st) => st.isDirectory()).catch(() => false)
     if (isDir) await shell.openPath(p)
@@ -122,6 +129,8 @@ function createWindow() {
     titleBarOverlay: isWin || process.platform === 'linux' ? { color: '#100f0e', symbolColor: '#7d776d', height: 44 } : undefined,
     trafficLightPosition: { x: 16, y: 20 },
     show: false,
+    fullscreen: true,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -132,6 +141,15 @@ function createWindow() {
     },
   })
   win.once('ready-to-show', () => win.show())
+  const sendState = () => win.webContents.send('window:fullscreen', win.isFullScreen())
+  win.on('enter-full-screen', sendState)
+  win.on('leave-full-screen', sendState)
+  win.webContents.on('before-input-event', (e, input) => {
+    if (input.type === 'keyDown' && input.key === 'F11') {
+      e.preventDefault()
+      win.setFullScreen(!win.isFullScreen())
+    }
+  })
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) shell.openExternal(url)
     return { action: 'deny' }
