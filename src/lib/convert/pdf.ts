@@ -129,3 +129,18 @@ export async function pdfToMarkdown(file: File, onProgress?: (p: string) => void
     .filter(Boolean)
     .join('\n\n')
 }
+
+export async function renderPdfPages(file: File, maxPages: number, onPage: (canvas: HTMLCanvasElement, n: number, total: number) => void, isCancelled: () => boolean) {
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
+  const total = doc.numPages
+  for (let n = 1; n <= Math.min(total, maxPages); n++) {
+    if (isCancelled()) return
+    const page = await doc.getPage(n)
+    const viewport = page.getViewport({ scale: 1.6 })
+    const canvas = document.createElement('canvas')
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    await page.render({ canvasContext: canvas.getContext('2d')!, viewport }).promise
+    onPage(canvas, n, total)
+  }
+}

@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react'
 import { extOf } from '../lib/formats'
+import { inkOf } from '../lib/ink'
 
 export function cn(...c: (string | false | null | undefined)[]) {
   return c.filter(Boolean).join(' ')
@@ -43,12 +44,11 @@ export function Kbd({ children }: { children: ReactNode }) {
 
 export function FileTag({ name, active }: { name: string; active?: boolean }) {
   const ext = (extOf(name) || 'file').slice(0, 4)
+  const { color } = inkOf(name)
   return (
     <span
-      className={cn(
-        'inline-grid h-[18px] w-[38px] flex-none place-items-center rounded-[2px] border font-mono text-[9px] font-medium uppercase tracking-[0.08em] transition-colors',
-        active ? 'border-vermilion/60 text-vermilion' : 'border-rule-2 text-pencil',
-      )}
+      className="inline-grid h-[18px] w-[38px] flex-none place-items-center rounded-[2px] border font-mono text-[9px] font-medium uppercase tracking-[0.08em] transition-colors"
+      style={{ color, borderColor: `color-mix(in oklab, ${color} ${active ? 80 : 40}%, transparent)`, background: active ? `color-mix(in oklab, ${color} 14%, transparent)` : undefined }}
     >
       {ext}
     </span>

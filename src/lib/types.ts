@@ -14,6 +14,7 @@ export interface Job {
   tokens?: number
   engine?: 'native' | 'browser'
   ms?: number
+  restored?: boolean
 }
 
 export interface HistoryEntry {

@@ -7,8 +7,8 @@ const mod = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator
 
 const GROUPS: { title: string; items: [string, string[]][] }[] = [
   { title: 'Add', items: [['Choose files', [mod, 'O']], ['Choose a folder', [mod, 'Shift', 'O']], ['Paste files', [mod, 'V']]] },
-  { title: 'Output', items: [['Copy for AI', ['C']], ['Save .md', ['D']], ['Read / source', ['Tab']], ['Export all', [mod, 'E']], ['Next / previous page', ['↓', '↑']]] },
-  { title: 'General', items: [['Archive', [mod, 'H']], ['This sheet', ['?']], ['Close', ['Esc']]] },
+  { title: 'Output', items: [['Copy for AI', ['C']], ['Save .md', ['D']], ['Read · source · compare', ['Tab']], ['Export all', [mod, 'E']], ['Next / previous page', ['↓', '↑']]] },
+  { title: 'General', items: [['Find anything', [mod, 'K']], ['Archive', [mod, 'H']], ['This sheet', ['?']], ['Close', ['Esc']]] },
 ]
 
 export function ShortcutsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {

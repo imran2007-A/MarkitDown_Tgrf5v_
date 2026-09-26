@@ -12,6 +12,13 @@ const theme = EditorView.theme(
     '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { backgroundColor: '#e5532d33 !important' },
     '.cm-activeLine': { backgroundColor: 'transparent' },
     '.cm-line': { padding: '0 28px' },
+    '.cm-panels': { backgroundColor: '#1f1e1b', color: '#b8b1a4', borderColor: '#2b2926' },
+    '.cm-panels.cm-panels-top': { borderBottom: '1px solid #2b2926' },
+    '.cm-panel.cm-search': { padding: '10px 16px', fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px' },
+    '.cm-panel.cm-search input, .cm-panel.cm-search button': { fontFamily: 'inherit', fontSize: '11px', background: '#191816', color: '#ebe5d9', border: '1px solid #3a3733', borderRadius: '2px', padding: '3px 8px', backgroundImage: 'none' },
+    '.cm-panel.cm-search label': { color: '#7d776d' },
+    '.cm-searchMatch': { backgroundColor: '#e5532d33', outline: '1px solid #e5532d88' },
+    '.cm-searchMatch-selected': { backgroundColor: '#e5532d66' },
   },
   { dark: true },
 )

@@ -15,7 +15,10 @@ import { Stamp } from './components/Stamp'
 import { HistoryDrawer } from './components/HistoryDrawer'
 import { ShortcutsDialog } from './components/ShortcutsDialog'
 import { useToast } from './components/Toaster'
-import { TextButton } from './components/ui'
+import { Kbd, TextButton } from './components/ui'
+import { CommandPalette, type Command } from './components/CommandPalette'
+import { addToLedger } from './lib/stats'
+import { canPickDirectory, downloadText, downloadZip, mergeWithToc, saveToFolder } from './lib/export'
 
 const CONCURRENCY = 3
 const uid = () => Math.random().toString(36).slice(2, 10)
@@ -29,6 +32,8 @@ export default function App() {
   const [mode, setMode] = useState<Mode>('read')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
+  const ledgered = useRef(new Set<string>())
   const [nativeEngine, setNativeEngine] = useState(false)
   const [installEvt, setInstallEvt] = useState<InstallEvent | null>(null)
   const [drag, setDrag] = useState({ active: false, count: 0 })
@@ -136,6 +141,16 @@ export default function App() {
         tokens: totalTokens,
         files: done.map((j) => ({ relPath: j.relPath, markdown: j.markdown ?? '' })),
       }).catch(() => {})
+      const fresh = done.filter((j) => !j.restored && !ledgered.current.has(j.id))
+      fresh.forEach((j) => ledgered.current.add(j.id))
+      if (fresh.length) {
+        addToLedger({
+          files: fresh.length,
+          tokens: fresh.reduce((n, j) => n + (j.tokens ?? 0), 0),
+          bytesIn: fresh.reduce((n, j) => n + j.size, 0),
+          bytesOut: fresh.reduce((n, j) => n + new Blob([j.markdown ?? '']).size, 0),
+        })
+      }
       const failed = jobs.filter((j) => j.status === 'error').length
       if (failed) toast(`${failed} ${failed === 1 ? 'file' : 'files'} could not be read`, 'err')
     }
@@ -157,7 +172,7 @@ export default function App() {
       const name = f.relPath.split('/').pop()!
       return {
         id: uid(), file: new File([f.markdown], name), relPath: f.relPath, name, ext: extOf(name),
-        size: f.markdown.length, status: 'done', markdown: f.markdown, tokens: undefined,
+        size: f.markdown.length, status: 'done', markdown: f.markdown, tokens: undefined, restored: true,
       }
     })
     setJobs(restored)
@@ -174,6 +189,9 @@ export default function App() {
       if (mod && e.key.toLowerCase() === 'o') {
         e.preventDefault()
         ;(e.shiftKey ? folderInputRef : fileInputRef).current?.click()
+      } else if (mod && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setPaletteOpen((o) => !o)
       } else if (mod && e.key.toLowerCase() === 'h') {
         e.preventDefault()
         setHistoryOpen(true)
@@ -232,19 +250,55 @@ export default function App() {
   const pickFolder = () => folderInputRef.current?.click()
   const loadSample = () => addPicked([{ file: sampleFile(), relPath: 'os-unit-3-notes.html', supported: true }])
   const hasJobs = jobs.length > 0
+  const outFiles = done.map((j) => ({ relPath: j.relPath, markdown: j.markdown ?? '' }))
+  const commands: Command[] = [
+    { id: 'files', label: 'Add files…', hint: 'Ctrl O', run: pickFiles },
+    { id: 'folder', label: 'Add a folder…', hint: 'Ctrl Shift O', run: pickFolder },
+    { id: 'sample', label: 'Open the sample page', run: loadSample },
+    ...(done.length
+      ? [
+          { id: 'merge', label: `Export ${done.length > 1 ? `all ${done.length} as ` : ''}one merged file`, hint: 'with table of contents', run: () => { downloadText(mergeWithToc(outFiles, exportName), `${exportName}.md`); doStamp('Merged') } },
+          { id: 'zip', label: 'Export as zip', run: async () => { await downloadZip(outFiles, exportName); doStamp('Zipped') } },
+          ...(canPickDirectory() ? [{ id: 'folderout', label: 'Export into a folder…', run: async () => { if (await saveToFolder(outFiles)) doStamp('Filed') } }] : []),
+          { id: 'read', label: 'View: read', hint: 'Tab', run: () => { setDir(0); setMode('read') } },
+          { id: 'source', label: 'View: source (edit, Ctrl F to find & replace)', run: () => { setDir(0); setMode('source') } },
+          { id: 'compare', label: 'View: compare with original', run: () => { setDir(0); setMode('compare') } },
+          { id: 'clear', label: 'Clear the desk', run: clearAll },
+        ]
+      : []),
+    { id: 'archive', label: 'Open the archive', hint: 'Ctrl H', run: () => setHistoryOpen(true) },
+    { id: 'keys', label: 'Keyboard shortcuts', hint: '?', run: () => setShortcutsOpen(true) },
+  ]
 
   return (
     <div className="grain flex h-full flex-col">
-      <header className="titlebar flex h-11 flex-none items-center gap-6 border-b border-rule px-4 lg:px-5">
-        <button onClick={clearAll} className="flex items-baseline gap-2" aria-label="Mdify — start over">
+      <header className="titlebar flex h-11 flex-none items-center gap-5 border-b border-rule px-4 lg:px-5">
+        <button onClick={clearAll} className="flex items-baseline gap-2" aria-label="Mdify — back to the desk">
           <span className="font-serif text-[21px] font-medium italic leading-none tracking-[-0.02em] text-ink">Mdify</span>
           <span className="size-[5px] translate-y-[-2px] rounded-full bg-vermilion" aria-hidden />
         </button>
-        <nav className="ml-auto flex items-center gap-5">
-          <span className="label hidden text-faint sm:inline" title={nativeEngine ? 'MarkItDown engine available' : 'Everything runs on this device'}>
-            {nativeEngine ? 'Native engine' : 'Offline'}
+        <span className="label hidden text-faint md:inline">
+          Session · {new Date().toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}
+          {hasJobs && <> · <span className="text-pencil">{done.length} {done.length === 1 ? 'page' : 'pages'}</span></>}
+        </span>
+        <button
+          onClick={() => setPaletteOpen(true)}
+          className="mx-auto hidden h-7 w-[340px] items-center gap-3 rounded-[3px] border border-rule bg-paper/60 px-3 text-left transition-colors hover:border-rule-2 sm:flex"
+        >
+          <span className="label text-faint">Find</span>
+          <span className="flex-1 truncate font-serif text-[14px] italic text-pencil">pages, phrases, commands</span>
+          <span className="flex gap-1"><Kbd>Ctrl</Kbd><Kbd>K</Kbd></span>
+        </button>
+        <nav className="ml-auto flex items-center gap-5 sm:ml-0">
+          <span className="label hidden items-center gap-2 text-pencil lg:flex" title={nativeEngine ? 'Microsoft MarkItDown engine is available as a fallback' : 'Everything runs on this device'}>
+            <span className="relative flex size-2">
+              <span className="absolute inset-0 animate-ping rounded-full opacity-40" style={{ background: nativeEngine ? '#6fa8a3' : '#8fa37a', animationDuration: '2.4s' }} />
+              <span className="relative size-2 rounded-full" style={{ background: nativeEngine ? '#6fa8a3' : '#8fa37a' }} />
+            </span>
+            {nativeEngine ? 'Native engine' : 'On-device'}
           </span>
           {installEvt && <TextButton onClick={async () => { await installEvt.prompt(); setInstallEvt(null) }}>Install</TextButton>}
+          <TextButton onClick={() => setPaletteOpen(true)} className="sm:hidden">Find</TextButton>
           <TextButton onClick={() => setHistoryOpen(true)}>Archive</TextButton>
           <TextButton onClick={() => setShortcutsOpen(true)} aria-label="Keyboard shortcuts" className="max-sm:hidden">?</TextButton>
         </nav>
@@ -253,7 +307,7 @@ export default function App() {
       <AnimatePresence mode="wait">
         {!hasJobs ? (
           <motion.main key="empty" className="min-h-0 flex-1" exit={{ opacity: 0, y: -12, transition: { duration: 0.2 } }}>
-            <EmptyDesk onFiles={pickFiles} onFolder={pickFolder} onSample={loadSample} />
+            <EmptyDesk onFiles={pickFiles} onFolder={pickFolder} onSample={loadSample} onRestore={restore} />
           </motion.main>
         ) : (
           <motion.div key="work" className="flex min-h-0 flex-1 flex-col lg:flex-row" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -263,7 +317,7 @@ export default function App() {
               busy={busy}
               progress={progress}
               totalTokens={totalTokens}
-              exportFiles={done.map((j) => ({ relPath: j.relPath, markdown: j.markdown ?? '' }))}
+              exportFiles={outFiles}
               exportName={exportName}
               onSelect={select}
               onRemove={(id) => { setJobs((js) => js.filter((j) => j.id !== id)); if (id === selectedId) setSelectedId(null) }}
@@ -275,7 +329,7 @@ export default function App() {
             />
             <main className="relative min-h-0 flex-1 border-t border-rule lg:border-t-0">
               {selected ? (
-                <Sheet job={selected} dir={dir} mode={mode} onMode={(m) => { setDir(0); setMode(m) }} onEdit={onEdit} onStamp={doStamp} />
+                <Sheet job={selected} tabs={done.map((j) => ({ id: j.id, name: j.name }))} onSelect={select} dir={dir} mode={mode} onMode={(m) => { setDir(0); setMode(m) }} onEdit={onEdit} onStamp={doStamp} />
               ) : (
                 <div className="grid h-full place-items-center px-6">
                   <div className="w-full max-w-[420px] text-center">
@@ -301,6 +355,7 @@ export default function App() {
       <DragVeil active={drag.active} count={drag.count} />
       <HistoryDrawer open={historyOpen} onClose={() => setHistoryOpen(false)} onRestore={restore} />
       <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} jobs={jobs} commands={commands} onOpenJob={select} />
     </div>
   )
 }
