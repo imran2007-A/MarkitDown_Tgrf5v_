@@ -18,6 +18,7 @@ import { useToast } from './components/Toaster'
 import { Kbd, TextButton } from './components/ui'
 import { CommandPalette, type Command } from './components/CommandPalette'
 import { addToLedger } from './lib/stats'
+import { setSoundOn, soundOn } from './lib/typewriter'
 import { canPickDirectory, mergeWithToc, saveText, saveToFolder, saveZip, type SaveReceipt } from './lib/export'
 import { Receipt } from './components/Receipt'
 
@@ -277,6 +278,7 @@ export default function App() {
       : []),
     { id: 'archive', label: 'Open the archive', hint: 'Ctrl H', run: () => setHistoryOpen(true) },
     { id: 'keys', label: 'Keyboard shortcuts', hint: '?', run: () => setShortcutsOpen(true) },
+    { id: 'sound', label: `Splash sound: turn ${soundOn() ? 'off' : 'on'}`, run: () => { const on = !soundOn(); setSoundOn(on); toast(`Splash sound ${on ? 'on' : 'off'}`, 'info') } },
   ]
 
   return (

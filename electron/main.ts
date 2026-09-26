@@ -128,6 +128,7 @@ function createWindow() {
       sandbox: true,
       nodeIntegration: false,
       spellcheck: false,
+      autoplayPolicy: 'no-user-gesture-required',
     },
   })
   win.once('ready-to-show', () => win.show())

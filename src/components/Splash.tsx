@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { bell, keyStrike } from '../lib/typewriter'
 import { AnimatePresence, motion } from 'motion/react'
 
 const WORD = 'Mdify'
@@ -52,6 +53,17 @@ export function Splash({ onLeaving, onDone }: { onLeaving: () => void; onDone: (
   const stripped = reduced || t >= T_STRIP
   const dot = reduced || t >= T_DOT
   const tagChars = reduced ? TAGLINE.length : Math.max(0, Math.min(TAGLINE.length, Math.floor((t - T_TAG) / TAG_MS)))
+
+  // Sound follows the animation: one strike per glyph, a bell when the caret becomes the dot
+  const heard = useRef({ hash: false, typed: 0, dot: false, tag: 0 })
+  useEffect(() => {
+    if (reduced || leaving) return
+    const h = heard.current
+    if (showHash && !h.hash) { h.hash = true; keyStrike(0.7) }
+    if (typed > h.typed) { h.typed = typed; keyStrike(1) }
+    if (dot && !h.dot) { h.dot = true; bell() }
+    if (tagChars - h.tag >= 3) { h.tag = tagChars; keyStrike(0.35) }
+  }, [showHash, typed, dot, tagChars, leaving])
 
   return (
     <AnimatePresence onExitComplete={onDone}>
