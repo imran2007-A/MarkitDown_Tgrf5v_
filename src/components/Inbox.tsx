@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { RotateCw, X } from 'lucide-react'
 import type { Job } from '../lib/types'
-import type { OutFile } from '../lib/export'
+import type { OutFile, SaveReceipt } from '../lib/export'
 import { formatTokens } from '../lib/tokens'
 import { formatBytes } from '../lib/formats'
 import { inkOf, INKS } from '../lib/ink'
@@ -24,7 +24,7 @@ interface Props {
   onAddFiles: () => void
   onAddFolder: () => void
   onClear: () => void
-  onExported: (label: string) => void
+  onExported: (r: SaveReceipt, verb: string) => void
 }
 
 const pad = (n: number) => String(n).padStart(2, '0')

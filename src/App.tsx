@@ -18,7 +18,8 @@ import { useToast } from './components/Toaster'
 import { Kbd, TextButton } from './components/ui'
 import { CommandPalette, type Command } from './components/CommandPalette'
 import { addToLedger } from './lib/stats'
-import { canPickDirectory, downloadText, downloadZip, mergeWithToc, saveToFolder } from './lib/export'
+import { canPickDirectory, mergeWithToc, saveText, saveToFolder, saveZip, type SaveReceipt } from './lib/export'
+import { Receipt } from './components/Receipt'
 
 const CONCURRENCY = 3
 const uid = () => Math.random().toString(36).slice(2, 10)
@@ -38,6 +39,7 @@ export default function App() {
   const [installEvt, setInstallEvt] = useState<InstallEvent | null>(null)
   const [drag, setDrag] = useState({ active: false, count: 0 })
   const [stamp, setStamp] = useState<{ id: number; label: string } | null>(null)
+  const [receipt, setReceipt] = useState<(SaveReceipt & { verb: string }) | null>(null)
   const running = useRef(new Set<string>())
   const sessionId = useRef(uid())
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -163,6 +165,8 @@ export default function App() {
     if (busy) return
     setJobs([])
     setSelectedId(null)
+    setMode('read')
+    setDir(0)
     sessionId.current = uid()
   }
 
@@ -246,6 +250,11 @@ export default function App() {
     }
   }, [addPicked])
 
+  const guard = (fn: () => Promise<void>) => () => { fn().catch((e) => toast(`Couldn't save: ${e instanceof Error ? e.message : 'unknown error'}`, 'err')) }
+  const onSaved = (r: SaveReceipt, verb: string) => {
+    doStamp(verb)
+    setTimeout(() => setReceipt({ ...r, verb }), 450)
+  }
   const pickFiles = () => fileInputRef.current?.click()
   const pickFolder = () => folderInputRef.current?.click()
   const loadSample = () => addPicked([{ file: sampleFile(), relPath: 'os-unit-3-notes.html', supported: true }])
@@ -257,9 +266,9 @@ export default function App() {
     { id: 'sample', label: 'Open the sample page', run: loadSample },
     ...(done.length
       ? [
-          { id: 'merge', label: `Export ${done.length > 1 ? `all ${done.length} as ` : ''}one merged file`, hint: 'with table of contents', run: () => { downloadText(mergeWithToc(outFiles, exportName), `${exportName}.md`); doStamp('Merged') } },
-          { id: 'zip', label: 'Export as zip', run: async () => { await downloadZip(outFiles, exportName); doStamp('Zipped') } },
-          ...(canPickDirectory() ? [{ id: 'folderout', label: 'Export into a folder…', run: async () => { if (await saveToFolder(outFiles)) doStamp('Filed') } }] : []),
+          { id: 'merge', label: `Export ${done.length > 1 ? `all ${done.length} as ` : ''}one merged file`, hint: 'with table of contents', run: guard(async () => { const r = await saveText(mergeWithToc(outFiles, exportName), `${exportName}.md`); if (r) onSaved(r, 'Merged') }) },
+          { id: 'zip', label: 'Export as zip', run: guard(async () => { const r = await saveZip(outFiles, exportName); if (r) onSaved(r, 'Zipped') }) },
+          ...(canPickDirectory() ? [{ id: 'folderout', label: 'Export into a folder…', run: guard(async () => { const r = await saveToFolder(outFiles); if (r) onSaved(r, 'Filed') }) }] : []),
           { id: 'read', label: 'View: read', hint: 'Tab', run: () => { setDir(0); setMode('read') } },
           { id: 'source', label: 'View: source (edit, Ctrl F to find & replace)', run: () => { setDir(0); setMode('source') } },
           { id: 'compare', label: 'View: compare with original', run: () => { setDir(0); setMode('compare') } },
@@ -325,11 +334,11 @@ export default function App() {
               onAddFiles={pickFiles}
               onAddFolder={pickFolder}
               onClear={clearAll}
-              onExported={doStamp}
+              onExported={onSaved}
             />
             <main className="relative min-h-0 flex-1 border-t border-rule lg:border-t-0">
               {selected ? (
-                <Sheet job={selected} tabs={done.map((j) => ({ id: j.id, name: j.name }))} onSelect={select} dir={dir} mode={mode} onMode={(m) => { setDir(0); setMode(m) }} onEdit={onEdit} onStamp={doStamp} />
+                <Sheet job={selected} tabs={done.map((j) => ({ id: j.id, name: j.name }))} onSelect={select} dir={dir} mode={mode} onMode={(m) => { setDir(0); setMode(m) }} onEdit={onEdit} onStamp={doStamp} onSaved={onSaved} />
               ) : (
                 <div className="grid h-full place-items-center px-6">
                   <div className="w-full max-w-[420px] text-center">
@@ -355,6 +364,11 @@ export default function App() {
       <DragVeil active={drag.active} count={drag.count} />
       <HistoryDrawer open={historyOpen} onClose={() => setHistoryOpen(false)} onRestore={restore} />
       <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
+      <Receipt
+        receipt={receipt}
+        onClose={() => setReceipt(null)}
+        onNewBatch={() => { setReceipt(null); clearAll() }}
+      />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} jobs={jobs} commands={commands} onOpenJob={select} />
     </div>
   )

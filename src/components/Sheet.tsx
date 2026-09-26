@@ -4,8 +4,9 @@ import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import type { Job } from '../lib/types'
 import { countTokens, CONTEXT_WINDOWS, formatTokens } from '../lib/tokens'
-import { downloadText, mdPath } from '../lib/export'
+import { mdPath, saveText, type SaveReceipt } from '../lib/export'
 import { cn, TextButton } from './ui'
+import { useToast } from './Toaster'
 import { PaperClip } from './DeskProps'
 import { Marginalia } from './Marginalia'
 import { OriginalView } from './OriginalView'
@@ -49,10 +50,12 @@ interface Props {
   onMode: (m: Mode) => void
   onEdit: (id: string, markdown: string) => void
   onStamp: (label: string) => void
+  onSaved: (r: SaveReceipt, verb: string) => void
 }
 
-export function Sheet({ job, tabs, onSelect, dir, mode, onMode, onEdit, onStamp }: Props) {
+export function Sheet({ job, tabs, onSelect, dir, mode, onMode, onEdit, onStamp, onSaved }: Props) {
   const ink = inkOf(job.name)
+  const toast = useToast()
   const markdown = job.markdown ?? ''
   const debounced = useDebounced(markdown, 220)
   const [tokens, setTokens] = useState(job.tokens ?? 0)
@@ -68,13 +71,18 @@ export function Sheet({ job, tabs, onSelect, dir, mode, onMode, onEdit, onStamp 
     await navigator.clipboard.writeText(`<document path="${job.relPath}">\n${markdown}\n</document>`)
     onStamp('Copied')
   }
-  const download = () => {
-    downloadText(markdown, mdPath(job.name))
-    onStamp('Saved')
+  const download = async () => {
+    try {
+      const r = await saveText(markdown, mdPath(job.name))
+      if (r) onSaved(r, 'Saved')
+    } catch (e) {
+      toast(`Couldn't save: ${e instanceof Error ? e.message : 'unknown error'}`, 'err')
+    }
   }
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (document.querySelector('[role=dialog], [role=alertdialog], [role=menu]')) return
       const typing = (e.target as HTMLElement)?.closest?.('input, textarea, .cm-editor, [contenteditable]')
       const mod = e.ctrlKey || e.metaKey
       if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); download() }

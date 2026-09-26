@@ -34,6 +34,7 @@ export interface DesktopBridge {
   convertNative: (path: string) => Promise<{ markdown?: string; error?: string }>
   pickFolder: () => Promise<string | null>
   saveFiles: (dir: string, files: { relPath: string; content: string }[]) => Promise<{ written: number }>
+  saveFile: (name: string, data: string | Uint8Array) => Promise<string | null>
   revealInFolder: (path: string) => Promise<void>
 }
 

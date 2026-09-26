@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from 'electron'
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { createInterface } from 'node:readline'
 import { pathToFileURL } from 'node:url'
@@ -88,10 +88,25 @@ function registerIpc() {
       await writeFile(target, f.content, 'utf8')
       written++
     }
-    shell.openPath(root)
     return { written }
   })
-  ipcMain.handle('shell:reveal', (_e, p: string) => shell.showItemInFolder(p))
+  ipcMain.handle('fs:saveFile', async (e, name: string, data: string | Uint8Array) => {
+    const win = BrowserWindow.fromWebContents(e.sender)!
+    const isZip = name.toLowerCase().endsWith('.zip')
+    const r = await dialog.showSaveDialog(win, {
+      title: 'Save as',
+      defaultPath: path.join(app.getPath('downloads'), path.basename(name)),
+      filters: isZip ? [{ name: 'Zip archive', extensions: ['zip'] }] : [{ name: 'Markdown', extensions: ['md'] }],
+    })
+    if (r.canceled || !r.filePath) return null
+    await writeFile(r.filePath, typeof data === 'string' ? data : Buffer.from(data))
+    return r.filePath
+  })
+  ipcMain.handle('shell:reveal', async (_e, p: string) => {
+    const isDir = await stat(p).then((st) => st.isDirectory()).catch(() => false)
+    if (isDir) await shell.openPath(p)
+    else shell.showItemInFolder(p)
+  })
 }
 
 function createWindow() {

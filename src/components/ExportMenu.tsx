@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { OutFile } from '../lib/export'
-import { canPickDirectory, downloadIndividually, downloadText, downloadZip, mergeWithToc, saveToFolder } from '../lib/export'
+import { canPickDirectory, mergeWithToc, saveIndividually, saveText, saveToFolder, saveZip, type SaveReceipt } from '../lib/export'
 import { cn } from './ui'
 import { useToast } from './Toaster'
 
-export function ExportMenu({ files, name, onDone }: { files: OutFile[]; name: string; onDone: (label: string) => void }) {
+export function ExportMenu({ files, name, onDone }: { files: OutFile[]; name: string; onDone: (r: SaveReceipt, verb: string) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const toast = useToast()
@@ -32,11 +32,11 @@ export function ExportMenu({ files, name, onDone }: { files: OutFile[]; name: st
     return () => window.removeEventListener('keydown', onKey)
   }, [files.length])
 
-  const run = async (fn: () => Promise<string | null>) => {
+  const run = async (verb: string, fn: () => Promise<SaveReceipt | null>) => {
     setOpen(false)
     try {
-      const label = await fn()
-      if (label) onDone(label)
+      const r = await fn()
+      if (r) onDone(r, verb)
     } catch (e) {
       toast(e instanceof Error ? e.message : 'Export failed', 'err')
     }
@@ -45,11 +45,11 @@ export function ExportMenu({ files, name, onDone }: { files: OutFile[]; name: st
   const n = files.length
   const itemsRef = useRef<{ key: string; action: () => void }[]>([])
   const items = [
-    { key: 'M', title: 'One merged file', desc: 'With a table of contents. Best for AI chats.', action: () => run(async () => { downloadText(mergeWithToc(files, name), `${name}.md`); return 'Merged' }) },
-    { key: 'Z', title: 'Zip archive', desc: 'Separate files, folder structure kept.', action: () => run(async () => { await downloadZip(files, name); return 'Zipped' }) },
-    { key: 'I', title: 'Individual files', desc: `${n} separate downloads.`, action: () => run(async () => { await downloadIndividually(files); return 'Saved' }) },
+    { key: 'M', title: 'One merged file', desc: 'With a table of contents. Best for AI chats.', action: () => run('Merged', () => saveText(mergeWithToc(files, name), `${name}.md`)) },
+    { key: 'Z', title: 'Zip archive', desc: 'Separate files, folder structure kept.', action: () => run('Zipped', () => saveZip(files, name)) },
+    { key: 'I', title: 'Individual files', desc: window.mdify ? 'Pick a folder; one .md per file.' : `${n} separate downloads.`, action: () => run('Saved', () => saveIndividually(files)) },
     ...(canPickDirectory()
-      ? [{ key: 'F', title: 'Into a folder…', desc: 'Write the .md files where you choose.', action: () => run(async () => { const r = await saveToFolder(files); return r ? 'Filed' : null }) }]
+      ? [{ key: 'F', title: 'Into a folder…', desc: 'Write the .md files where you choose.', action: () => run('Filed', () => saveToFolder(files)) }]
       : []),
   ]
 

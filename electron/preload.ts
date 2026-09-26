@@ -14,5 +14,6 @@ contextBridge.exposeInMainWorld('mdify', {
   convertNative: (p: string) => ipcRenderer.invoke('engine:convert', p),
   pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
   saveFiles: (dir: string, files: { relPath: string; content: string }[]) => ipcRenderer.invoke('fs:saveFiles', dir, files),
+  saveFile: (name: string, data: string | Uint8Array) => ipcRenderer.invoke('fs:saveFile', name, data),
   revealInFolder: (p: string) => ipcRenderer.invoke('shell:reveal', p),
 })
