@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => {
   const isElectron = mode === 'electron'
   return {
   base: isElectron ? './' : '/',
+  define: { __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '1.0.0') },
   plugins: [
     ocrAssets(),
     react(),

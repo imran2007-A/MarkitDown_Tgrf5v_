@@ -51,6 +51,7 @@ export function tidyMarkdown(md: string): string {
   return md
     .replace(/^(\s*)([-*+])\s{2,}/gm, '$1$2 ')
     .replace(/^(\s*)(\d+\.)\s{2,}/gm, '$1$2 ')
+    .replace(/^(#{1,6} \d+)\\\./gm, '$1.')
     .replace(/\n{3,}/g, '\n\n')
     .trim()
 }

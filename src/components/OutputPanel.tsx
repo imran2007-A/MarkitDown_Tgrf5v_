@@ -75,6 +75,23 @@ export function OutputPanel({ job, onEdit }: Props) {
     toast(`Copied ${formatTokens(tokens)} tokens — paste into any AI chat`)
   }
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = (e.target as HTMLElement)?.closest?.('input, textarea, .cm-editor, [contenteditable]')
+      const mod = e.ctrlKey || e.metaKey
+      if (mod && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        downloadText(markdown, mdPath(job.name))
+      } else if (!typing && !mod && !e.altKey && e.key.toLowerCase() === 'c') {
+        copyForAI()
+      } else if (!typing && !mod && !e.altKey && e.key.toLowerCase() === 'd') {
+        downloadText(markdown, mdPath(job.name))
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
   const views: { id: View; label: string; Icon: typeof Eye }[] = [
     { id: 'preview', label: 'Preview', Icon: Eye },
     { id: 'edit', label: 'Edit', Icon: PencilLine },
@@ -131,7 +148,7 @@ export function OutputPanel({ job, onEdit }: Props) {
           <GhostButton onClick={() => downloadText(markdown, mdPath(job.name))} aria-label="Download .md">
             <Download size={14} /> <span className="hidden sm:inline">Download</span>
           </GhostButton>
-          <SparkleButton onClick={copyForAI}>Copy for AI</SparkleButton>
+          <SparkleButton onClick={copyForAI} title="Copy for AI (C)">Copy for AI</SparkleButton>
         </div>
       </footer>
     </section>
