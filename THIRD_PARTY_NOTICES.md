@@ -39,7 +39,7 @@ SOFTWARE.
 
 Adapted from [Magic UI](https://magicui.design) (the originals behind many 21st.dev community components), found in `src/components/magicui/`: Border Beam, Magic Card, Number Ticker, Marquee, Word Rotate, Blur Fade and Animated Shiny Text. They were recoloured and simplified for Vite; the `next-themes` dependency was removed.
 
-Copyright (c) 2023 Dillion Verma. Licensed under the MIT License (same terms as above).
+Copyright (c) Magic UI. Licensed under the MIT License (same terms as above).
 
 ## Microsoft MarkItDown (MIT License)
 
